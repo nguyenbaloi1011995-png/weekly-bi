@@ -1,0 +1,69 @@
+{
+  "simulated": true,
+  "weeks": [
+    {
+      "week": "2026-W36",
+      "sales": 120000,
+      "units": 650,
+      "orders": 510,
+      "grossProfit": 30000,
+      "adSpend": 12000
+    },
+    {
+      "week": "2026-W37",
+      "sales": 150000,
+      "units": 693,
+      "orders": 544,
+      "grossProfit": 45000,
+      "adSpend": 22500
+    },
+    {
+      "week": "2026-W38",
+      "sales": 132000,
+      "units": 736,
+      "orders": 578,
+      "grossProfit": 34320,
+      "adSpend": 14520
+    },
+    {
+      "week": "2026-W39",
+      "sales": 169000,
+      "units": 779,
+      "orders": 612,
+      "grossProfit": 47320,
+      "adSpend": 20280
+    },
+    {
+      "week": "2026-W40",
+      "sales": 154000,
+      "units": 822,
+      "orders": 646,
+      "grossProfit": 41580,
+      "adSpend": 16940
+    },
+    {
+      "week": "2026-W41",
+      "sales": 177000,
+      "units": 865,
+      "orders": 680,
+      "grossProfit": 51330,
+      "adSpend": 21240
+    },
+    {
+      "week": "2026-W42",
+      "sales": 191000,
+      "units": 908,
+      "orders": 714,
+      "grossProfit": 57300,
+      "adSpend": 22920
+    },
+    {
+      "week": "2026-W43",
+      "sales": 183000,
+      "units": 951,
+      "orders": 748,
+      "grossProfit": 51240,
+      "adSpend": 20130
+    }
+  ]
+}
