@@ -37,7 +37,7 @@ async function initialize() {
   const bars = document.querySelector("#bars");
 
   try {
-    const response = await fetch("./weekly.json", { cache: "no-cache" });
+    const response = await fetch("./weekly.json?v=filters-v2", { cache: "no-cache" });
     if (!response.ok) throw new Error("HTTP " + response.status);
     const data = await response.json();
     if (data.simulated !== true || !Array.isArray(data.rows)) throw new Error("Invalid demo data");
@@ -135,4 +135,5 @@ async function initialize() {
 
 if (typeof document !== "undefined") initialize();
 if (typeof module !== "undefined") module.exports = { summarize, filterRows, groupByWeek, ratio };
+
 
