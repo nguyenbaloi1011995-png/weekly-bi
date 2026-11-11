@@ -8,7 +8,7 @@ h1 { margin: 7px 0 0; font-size: clamp(24px, 5vw, 40px); }
 .badge { background: #254a5d; color: #d8faf4; border-radius: 30px; padding: 7px 12px; font-size: 13px; white-space: nowrap; }
 .filter { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 24px 0 16px; }
 label { display: grid; gap: 6px; font-size: 14px; }
-select, button { font: inherit; color: inherit; background: white; border: 1px solid #aebdcb; border-radius: 8px; padding: 8px 10px; min-height: 40px; }
+select, input, button { font: inherit; color: inherit; background: white; border: 1px solid #aebdcb; border-radius: 8px; padding: 8px 10px; min-height: 40px; }
 button { cursor: pointer; }
 #status { margin: 0 0 9px; color: #40586b; font-size: 14px; }
 .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -24,3 +24,4 @@ button { cursor: pointer; }
 .fill { background: #087e78; border-radius: inherit; height: 100%; }
 .amount { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 580px) { main { padding: 16px 12px; } header, .card, .panel { padding: 15px; } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+

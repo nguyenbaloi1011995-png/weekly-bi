@@ -6,10 +6,20 @@ function summarize(weeks) {
   return totals;
 }
 
-function selectWeeks(weeks, start, end) {
-  return weeks.filter(({ week }) => week >= start && week <= end);
+function filterRows(rows, start, end, filters) {
+  return rows.filter(row => (!start || row.date >= start) && (!end || row.date <= end) &&
+    Object.entries(filters).every(([key, value]) => !value || row[key] === value));
 }
 
+function groupByWeek(rows) {
+  const weeks = new Map();
+  for (const row of rows) {
+    if (!weeks.has(row.week)) weeks.set(row.week, []);
+    weeks.get(row.week).push(row);
+  }
+  return [...weeks].sort(([a], [b]) => a.localeCompare(b))
+    .map(([week, members]) => ({ week, ...summarize(members) }));
+}
 function ratio(value, sales) {
   return sales === 0 ? "—" : percent.format(value / sales);
 }
@@ -30,34 +40,45 @@ async function initialize() {
     const response = await fetch("./weekly.json", { cache: "no-cache" });
     if (!response.ok) throw new Error("HTTP " + response.status);
     const data = await response.json();
-    if (data.simulated !== true || !Array.isArray(data.weeks)) throw new Error("Invalid demo data");
-    const weeks = [...data.weeks].sort((a, b) => a.week.localeCompare(b.week));
+    if (data.simulated !== true || !Array.isArray(data.rows)) throw new Error("Invalid demo data");
+    const rows = data.rows;
+    const dimensions = ["group", "region", "product"];
     const keys = Object.keys(summarize([]));
-    if (new Set(weeks.map(row => row.week)).size !== weeks.length ||
-      weeks.some(row => !/^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/.test(row.week) ||
-        keys.some(key => !Number.isFinite(row[key])) || row.sales < 0)) {
-      throw new Error("Invalid weekly rows");
+    if (rows.some(row => !row || !/^\d{4}-\d{2}-\d{2}$/.test(row.date) ||
+      !/^\d{4}-W\d{2}$/.test(row.week) ||
+      dimensions.some(key => typeof row[key] !== "string" || !row[key]) ||
+      keys.some(key => !Number.isFinite(row[key])) || row.sales < 0)) {
+      throw new Error("Invalid demo rows");
     }
 
-    for (const select of [start, end]) {
-      select.replaceChildren(...weeks.map(({ week }) => new Option(week, week)));
+    const selects = dimensions.map(key => [key, document.getElementById(key)]);
+    const dates = rows.map(row => row.date).sort();
+    for (const input of [start, end]) {
+      input.min = dates[0] ?? "";
+      input.max = dates.at(-1) ?? "";
+      input.disabled = !rows.length;
     }
-    for (const control of [start, end, document.querySelector("#reset")]) control.disabled = !weeks.length;
+    for (const [key, select] of selects) {
+      const values = [...new Set(rows.map(row => row[key]))].sort();
+      select.replaceChildren(new Option("全部", ""), ...values.map(value => new Option(value, value)));
+      select.disabled = !rows.length;
+    }
 
     function render() {
-      const selected = selectWeeks(weeks, start.value, end.value);
+      const filters = Object.fromEntries(selects.map(([key, select]) => [key, select.value]));
+      const selected = groupByWeek(filterRows(rows, start.value, end.value, filters));
       metrics.replaceChildren();
       bars.replaceChildren();
       trend.hidden = !selected.length;
       status.textContent = selected.length ? `共 ${selected.length} 周` :
-        weeks.length ? "所选范围没有数据，请调整起止周。" : "暂无周数据。";
+        rows.length ? "当前条件下没有数据，请调整日期或筛选项。" : "暂无数据。";
       if (!selected.length) return;
 
       const { sales, units, orders, grossProfit, adSpend } = summarize(selected);
       const cards = [
         ["累计销售额", currency.format(sales)],
         ["累计销量", integer.format(units)],
-        ["累计订单量", integer.format(orders)],
+        ["产品订单数", integer.format(orders)],
         ["累计毛利率", ratio(grossProfit, sales)],
         ["累计广告花费", currency.format(adSpend)],
         ["广告花费占比", ratio(adSpend, sales)],
@@ -95,13 +116,15 @@ async function initialize() {
     }
 
     function reset() {
-      start.selectedIndex = weeks.length ? 0 : -1;
-      end.selectedIndex = weeks.length - 1;
+      start.value = dates[0] ?? "";
+      end.value = dates.at(-1) ?? "";
+      for (const [, select] of selects) select.value = "";
       render();
     }
 
-    start.addEventListener("change", render);
-    end.addEventListener("change", render);
+    for (const control of [start, end, ...selects.map(([, select]) => select)]) {
+      control.addEventListener("change", render);
+    }
     document.querySelector("#reset").addEventListener("click", reset);
     reset();
   } catch (error) {
@@ -111,4 +134,5 @@ async function initialize() {
 }
 
 if (typeof document !== "undefined") initialize();
-if (typeof module !== "undefined") module.exports = { summarize, selectWeeks, ratio };
+if (typeof module !== "undefined") module.exports = { summarize, filterRows, groupByWeek, ratio };
+

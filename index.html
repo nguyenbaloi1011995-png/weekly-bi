@@ -10,10 +10,13 @@
 <body>
 <main>
 <header><div><p class="eyebrow">经营分析 / 周报</p><h1>周数据总看板</h1></div><span class="badge">模拟数据</span></header>
-<section class="filter" aria-label="周次筛选">
-<label>起始周<select id="start"></select></label>
-<label>结束周<select id="end"></select></label>
-<button id="reset" type="button">全部周次</button>
+<section class="filter" aria-label="组合筛选">
+<label>开始日期<input type="date" id="start"></label>
+<label>结束日期<input type="date" id="end"></label>
+<label>小组<select id="group"></select></label>
+<label>地区<select id="region"></select></label>
+<label>产品<select id="product"></select></label>
+<button id="reset" type="button">重置筛选</button>
 <p id="status" role="status">正在加载…</p>
 </section>
 <section id="metrics" class="metrics" aria-label="核心指标"></section>
