@@ -206,7 +206,7 @@ const salesCache = new Map();
 const summaryInteger = new Intl.NumberFormat("zh-CN", {maximumFractionDigits: 0});
 const summaryMoney = new Intl.NumberFormat("zh-CN", {style: "currency", currency: "CNY", maximumFractionDigits: 0});
 const summaryPercent = new Intl.NumberFormat("zh-CN", {style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2});
-const salesKey = (date, group, region, asin) => JSON.stringify([date, group, region, asin === "-" ? "" : asin]);
+
 
 async function summarizeSales(start, end, filters, matchingKeys, request) {
   const totals = {};
@@ -341,43 +341,11 @@ async function initialize() {
       options.append(label);
     }
   });
-  const options = { asin: optionsFor(5), parent: optionsFor(6) };
-  function bindPicker(key, caption, selected) {
-    const search = document.querySelector("#" + key + "-search");
-    const list = document.querySelector("#" + key + "-options");
-    const count = document.querySelector("#" + key + "-count");
-    function updateCount() {
-      count.textContent = "已选 " + selected.size + " 个" + caption;
-    }
-    function show() {
-      const term = search.value.trim().toUpperCase();
-      const matches = options[key].filter(value => value.toUpperCase().includes(term)).slice(0, 30);
-      list.replaceChildren();
-      for (const value of new Set([...selected, ...matches])) {
-        const label = document.createElement("label");
-        const box = document.createElement("input");
-        box.type = "checkbox";
-        box.checked = selected.has(value);
-        box.addEventListener("change", () => {
-          if (box.checked) selected.add(value);
-          else selected.delete(value);
-          updateCount();
-        });
-        label.append(box, value);
-        list.append(label);
-      }
-      updateCount();
-    }
-    search.addEventListener("input", show);
-    return () => {
-      selected.clear();
-      search.value = "";
-      show();
-    };
-  }
 
-  const resetAsins = bindPicker("asin", " ASIN", selectedAsins);
-  const resetParents = bindPicker("parent", "父单", selectedParents);
+
+
+  const resetAsins = bindProductPicker("asin", " ASIN", selectedAsins, optionsFor(5));
+  const resetParents = bindProductPicker("parent", "父单", selectedParents, optionsFor(6));
   document.querySelector("#apply").addEventListener("click", render);
   grain.addEventListener("change", render);
   function reset() {

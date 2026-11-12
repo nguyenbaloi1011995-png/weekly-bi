@@ -70,7 +70,7 @@ async function initialize() {
   const status = document.querySelector("#status");
   const panel = document.querySelector("#trend");
   const output = document.querySelector("#bars");
-  const selects = ["group", "region", "product"].map(id => document.getElementById(id));
+  const selects = ["group", "region"].map(id => document.getElementById(id));
   const [sales, stock, extra] = await Promise.all([
     read("./data/index.json"),
     read("./chart-history/data/index.json"),
@@ -82,10 +82,17 @@ async function initialize() {
     new Date(sales.updatedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
   for (const input of [start, end]) { input.min = first; input.max = last; }
   selects.forEach((select, i) => {
-    const key = ["group", "region", "product"][i];
-    const values = [...new Set([...sales.dimensions[key], ...stock.options[[0, 1, 4][i]]])].sort();
+    const key = ["group", "region"][i];
+    const values = [...new Set([...sales.dimensions[key], ...stock.options[i]])].sort();
     select.replaceChildren(new Option("全部", ""), ...values.map(value => new Option(value, value)));
   });
+
+  const selectedAsins = new Set();
+  const selectedParents = new Set();
+  const asins = [...new Set([...sales.dimensions.product, ...stock.options[4]])]
+    .filter(value => value && value !== "-").sort();
+  const resetAsins = bindProductPicker("asin", " ASIN", selectedAsins, asins);
+  const resetParents = bindProductPicker("parent", "父单", selectedParents, stock.options[5]);
 
   const grain = monthly ? "month" : "week";
   const fieldIndexes = new Map(stock.fields.map((name, i) => [name, i]));
@@ -103,45 +110,62 @@ async function initialize() {
     const current = ++generation;
     const from = start.value || first;
     const to = end.value || last;
-    const [group, region, asin] = selects.map(select => select.value);
+    const [group, region] = selects.map(select => select.value);
+    const asins = new Set(selectedAsins);
+    const parents = [...selectedParents];
+    const parentKeys = parents.length ? new Set() : null;
+    const restrictedExtra = region || asins.size || parents.length;
     const inRange = day => day >= from && day <= to;
     const overlaps = file => from <= to && file.last >= from && file.first <= to;
-    const matches = (g, r, a) => (!group || group === g) && (!region || region === r) && (!asin || asin === a);
-    const selectors = [group ? [group] : [], region ? [region] : [], [], [], asin ? [asin] : [], []];
+    const matches = (g, r, a) => (!group || group === g) && (!region || region === r) && (!asins.size || asins.has(a));
+    const selectors = [group ? [group] : [], region ? [region] : [], [], [], [...asins], parents];
     const salesRoll = aggregateRows();
     const extraRoll = aggregateRows();
     const stockRoll = createBasisRollup(stock.fields, grain, from, to, selectors);
     const stockTotal = createBasisRollup(stock.fields, "total", from, to, selectors);
-    status.textContent = "正在读取数据…";
+    const salesFiles = sales.months.filter(overlaps);
+    const stockFiles = stock.files.filter(overlaps);
+    const extraFiles = restrictedExtra ? [] : (extra?.files ?? []).filter(overlaps);
+    const totalFiles = salesFiles.length + stockFiles.length + extraFiles.length;
+    let loaded = 0;
+    const reportProgress = () => { status.textContent = `正在读取数据 ${loaded} / ${totalFiles}…`; };
+    async function loadFiles(files, folder, compressed, addRows) {
+      for (const file of files) {
+        const rows = await load(folder + file.file, compressed);
+        if (current !== generation) return;
+        addRows(rows);
+        loaded++;
+        reportProgress();
+      }
+    }
+
+    reportProgress();
     try {
+      const captureParent = parentKeys ? ([date, group, region, , , asin]) =>
+        parentKeys.add(salesKey(date, group, region, asin)) : undefined;
+      const stockRead = loadFiles(stockFiles, "./chart-history/data/", true, rows => {
+        stockRoll.add(rows, captureParent);
+        stockTotal.add(rows);
+      });
+      const salesRead = async () => {
+        if (parentKeys) await stockRead;
+        if (current !== generation) return;
+        await loadFiles(salesFiles, "./data/", false, rows => {
+          for (const row of rows) {
+            if (!inRange(row.date) || !matches(row.group, row.region, row.product)) continue;
+            if (parentKeys && !parentKeys.has(salesKey(row.date, row.group, row.region, row.product))) continue;
+            salesRoll.add(row.date, [row.sales, row.units, row.orders, row.grossProfit, row.adSpend]);
+          }
+        });
+      };
       await Promise.all([
-        (async () => {
-          for (const file of sales.months.filter(overlaps)) {
-            const rows = await load("./data/" + file.file, false);
-            if (current !== generation) return;
-            for (const row of rows) if (inRange(row.date) && matches(row.group, row.region, row.product)) {
-              salesRoll.add(row.date, [row.sales, row.units, row.orders, row.grossProfit, row.adSpend]);
-            }
+        stockRead,
+        salesRead(),
+        loadFiles(extraFiles, "./monthly-metrics/", true, rows => {
+          for (const [date, g, ...values] of rows) {
+            if (inRange(date) && group === g) extraRoll.add(date, values);
           }
-        })(),
-        (async () => {
-          for (const file of stock.files.filter(overlaps)) {
-            const rows = await load("./chart-history/data/" + file.file, true);
-            if (current !== generation) return;
-            stockRoll.add(rows);
-            stockTotal.add(rows);
-          }
-        })(),
-        (async () => {
-          if (region || asin) return;
-          for (const file of (extra?.files ?? []).filter(overlaps)) {
-            const rows = await load("./monthly-metrics/" + file.file, true);
-            if (current !== generation) return;
-            for (const [date, g, ...values] of rows) {
-              if (inRange(date) && group === g) extraRoll.add(date, values);
-            }
-          }
-        })(),
+        }),
       ]);
       if (current !== generation) return;
       const inventory = new Map(stockRoll.finish().map(row => [row.label, row]));
@@ -175,7 +199,7 @@ async function initialize() {
       }));
       rows.push({sales: salesRoll.total, stock: stockTotal.finish()[0], extra: extraRoll.total});
       const note = document.querySelector("#extra-note");
-      if (note) note.hidden = !(region || asin);
+      if (note) note.hidden = !restrictedExtra;
       output.replaceChildren();
       panel.hidden = !periods.length;
       status.textContent = periods.length ? "共 " + periods.length + (monthly ? " 个月" : " 周") : "当前筛选条件无数据。";
@@ -200,7 +224,10 @@ async function initialize() {
       scroll.append(table);
       output.append(scroll);
     } catch (error) {
-      if (current === generation) status.textContent = "数据加载失败，请重新选择日期。";
+      if (current === generation) {
+        generation++;
+        status.textContent = "数据加载失败，请重新应用筛选。";
+      }
       console.error(error);
     }
   }
@@ -209,9 +236,12 @@ async function initialize() {
     start.value = monthly ? first : recentThreeMonths(first, last);
     end.value = last;
     selects.forEach(select => { select.value = ""; });
-    render();
+    resetAsins();
+    resetParents();
+    return render();
   }
   [start, end, ...selects].forEach(control => control.addEventListener("change", render));
+  document.querySelector("#apply").addEventListener("click", render);
   document.querySelector("#reset").addEventListener("click", reset);
   reset();
 }

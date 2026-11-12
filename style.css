@@ -52,3 +52,10 @@ td:last-child { background:#edf8f6; font-weight:700; }
 .chart-card .negative { background: #b34a2d; }
 .chart-card canvas { display:block; width:100%; height:auto; }
 .chart-placeholder { display:grid; place-items:center; min-height:145px; margin:0; color:#40586b; background:#f3f7fa; border-radius:8px; }
+
+.asin-picker { flex: 1 1 220px; min-width: 0; }
+.asin-picker input[type="search"] { width: 100%; }
+.product-options { max-height: 86px; overflow: auto; padding: 4px; }
+.filter .product-options label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.filter .product-options input[type="checkbox"] { width: auto; min-height: 0; }
+.asin-picker p { margin: 4px 0 0; font-size: 12px; }
