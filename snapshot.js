@@ -99,9 +99,23 @@ async function renderSnapshot() {
   const rows = await readSnapshot("stockout");
   const input = document.querySelector("#stock-search");
   const tbody = document.querySelector("#stock-rows");
+  const from = document.querySelector("#stock-from");
+  const to = document.querySelector("#stock-to");
+  const selects = ["group", "region", "parentTier", "childTier"].map(key =>
+    [key, document.getElementById("stock-" + key)]);
+  for (const [key, select] of selects) {
+    const values = [...new Set(rows.map(row => row[key]).filter(Boolean))].sort();
+    select.replaceChildren(new Option("全部", ""), ...values.map(value => new Option(value, value)));
+  }
+
   function showRows() {
     const query = input.value.trim().toLowerCase();
-    const matches = rows.filter(row => Object.values(row).some(value => String(value ?? "").toLowerCase().includes(query)));
+    const filters = selects.map(([key, select]) => [key, select.value]);
+    const matches = rows.filter(row =>
+      (!from.value || (row.date && row.date >= from.value)) &&
+      (!to.value || (row.date && row.date <= to.value)) &&
+      filters.every(([key, value]) => !value || row[key] === value) &&
+      (!query || Object.values(row).some(value => String(value ?? "").toLowerCase().includes(query))));
     tbody.replaceChildren();
     for (const row of matches) {
       const tr = tbody.insertRow();
@@ -113,6 +127,13 @@ async function renderSnapshot() {
     statusNode.textContent = "Excel 缺货明细快照 · 共 " + matches.length + " 条";
   }
   input.addEventListener("input", showRows);
+  for (const control of [from, to, ...selects.map(([, select]) => select)]) {
+    control.addEventListener("change", showRows);
+  }
+  document.querySelector("#stock-reset").addEventListener("click", () => {
+    for (const control of [from, to, input, ...selects.map(([, select]) => select)]) control.value = "";
+    showRows();
+  });
   showRows();
 }
 
