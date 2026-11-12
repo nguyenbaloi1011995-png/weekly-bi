@@ -11,15 +11,21 @@ function filterRows(rows, start, end, filters) {
     Object.entries(filters).every(([key, value]) => !value || row[key] === value));
 }
 
-function groupByWeek(rows) {
-  const weeks = new Map();
+function groupByPeriod(rows, keyForRow) {
+  const groups = new Map();
   for (const row of rows) {
-    if (!weeks.has(row.week)) weeks.set(row.week, []);
-    weeks.get(row.week).push(row);
+    const key = keyForRow(row);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
   }
-  return [...weeks].sort(([a], [b]) => a.localeCompare(b))
-    .map(([week, members]) => ({ week, ...summarize(members) }));
+  return [...groups].sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, members]) => ({ period, ...summarize(members) }));
 }
+
+function groupByWeek(rows) {
+  return groupByPeriod(rows, row => row.week).map(({ period, ...totals }) => ({ week: period, ...totals }));
+}
+
 function ratio(value, sales) {
   return sales === 0 ? "—" : percent.format(value / sales);
 }
@@ -27,6 +33,56 @@ function ratio(value, sales) {
 const currency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", maximumFractionDigits: 0 });
 const integer = new Intl.NumberFormat("zh-CN");
 const percent = new Intl.NumberFormat("zh-CN", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+function createSalesChart(rows) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 270;
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", rows.map(row => row.period + " 销量 " + integer.format(row.units)).join("，"));
+  const context = canvas.getContext("2d");
+  const left = 70, top = 20, width = 550, height = 212;
+  const low = rows.reduce((min, row) => Math.min(min, row.units), 0);
+  const high = rows.reduce((max, row) => Math.max(max, row.units), 1);
+  const x = index => left + (rows.length === 1 ? width / 2 : index * width / (rows.length - 1));
+  const y = units => top + (high - units) * height / (high - low);
+  context.font = "15px sans-serif";
+  context.fillStyle = "#40586b";
+  context.textAlign = "right";
+  for (let step = 0; step <= 4; step++) {
+    const value = high - (high - low) * step / 4;
+    const position = y(value);
+    context.strokeStyle = "#d9e3ec";
+    context.beginPath();
+    context.moveTo(left, position);
+    context.lineTo(left + width, position);
+    context.stroke();
+    context.fillText(integer.format(Math.round(value)), left - 8, position + 5);
+  }
+
+  context.strokeStyle = "#087e78";
+  context.lineWidth = 3;
+  context.beginPath();
+  rows.forEach((row, index) => {
+    if (index === 0) context.moveTo(x(index), y(row.units));
+    else context.lineTo(x(index), y(row.units));
+  });
+  context.stroke();
+  context.textAlign = "center";
+  const labelStep = Math.max(1, Math.ceil(rows.length / 6));
+  rows.forEach((row, index) => {
+    context.fillStyle = "#087e78";
+    context.beginPath();
+    context.arc(x(index), y(row.units), 4, 0, Math.PI * 2);
+    context.fill();
+    if (index % labelStep === 0) {
+      context.fillStyle = "#40586b";
+      const labelX = Math.max(45, Math.min(canvas.width - 42, x(index)));
+      context.fillText(row.period, labelX, 257);
+    }
+  });
+  return canvas;
+}
 
 async function initialize() {
   const start = document.querySelector("#start");
@@ -92,52 +148,82 @@ async function initialize() {
     }
 
     function showRows(rows, from, to, filters) {
-      const selected = groupByWeek(filterRows(rows, from, to, filters));
+      const page = document.body.dataset.page;
+      const monthly = page === "monthly.html";
+      const chart = page === "charts.html";
+      const selected = groupByPeriod(filterRows(rows, from, to, filters),
+        row => monthly ? row.date.slice(0, 7) : row.week);
       metrics.replaceChildren();
       bars.replaceChildren();
       trend.hidden = !selected.length;
-      status.textContent = selected.length ? `共 ${selected.length} 周` :
+      status.textContent = selected.length ? `共 ${selected.length} ${monthly ? "个月" : "周"}` :
         "当前条件下没有数据，请调整日期或筛选项。";
       if (!selected.length) return;
 
-      const { sales, units, orders, grossProfit, adSpend } = summarize(selected);
-      const cards = [
-        ["累计销售额", currency.format(sales)],
-        ["累计销量", integer.format(units)],
-        ["产品订单数", integer.format(orders)],
-        ["累计毛利率", ratio(grossProfit, sales)],
-        ["累计广告花费", currency.format(adSpend)],
-        ["广告花费占比", ratio(adSpend, sales)],
+      const totals = summarize(selected);
+      const definitions = [
+        ["累计销售额", row => currency.format(row.sales)],
+        ["累计销量", row => integer.format(row.units)],
+        ["产品订单数", row => integer.format(row.orders)],
+        ["累计毛利率", row => ratio(row.grossProfit, row.sales)],
+        ["累计广告花费", row => currency.format(row.adSpend)],
+        ["广告花费占比", row => ratio(row.adSpend, row.sales)],
       ];
-      for (const [label, value] of cards) {
+      for (const [label, format] of definitions) {
         const card = document.createElement("article");
         card.className = "card";
         const title = document.createElement("h2");
         title.textContent = label;
         const result = document.createElement("p");
-        result.textContent = value;
+        result.textContent = format(totals);
         card.append(title, result);
         metrics.append(card);
       }
 
-      const maximum = selected.reduce((max, row) => Math.max(max, Math.abs(row.sales)), 1);
-      for (const row of selected) {
-        const bar = document.createElement("div");
-        bar.className = "bar-row";
-        const label = document.createElement("span");
-        label.textContent = row.week;
-        const track = document.createElement("div");
-        track.className = "track";
-        track.setAttribute("aria-hidden", "true");
-        const fill = document.createElement("div");
-        fill.className = "fill";
-        fill.style.width = `${Math.abs(row.sales) / maximum * 100}%`;
-        track.append(fill);
-        const amount = document.createElement("span");
-        amount.className = "amount";
-        amount.textContent = (row.sales / 10000).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
-        bar.append(label, track, amount);
-        bars.append(bar);
+      if (!chart) {
+        const table = document.createElement("table");
+        const head = table.createTHead().insertRow();
+        const body = table.createTBody();
+        function heading(row, label, scope) {
+          const cell = document.createElement("th");
+          cell.scope = scope;
+          cell.textContent = label;
+          row.append(cell);
+        }
+        for (const label of ["指标", ...selected.map(row => row.period), "所选合计"]) {
+          heading(head, label, "col");
+        }
+        for (const [label, format] of definitions) {
+          const row = body.insertRow();
+          heading(row, label, "row");
+          for (const period of [...selected, totals]) row.insertCell().textContent = format(period);
+        }
+        const scroller = document.createElement("div");
+        scroller.className = "table-scroll";
+        scroller.append(table);
+        bars.append(scroller);
+        return;
+      }
+
+      const chartTitles = [
+        "国内库龄", "国内库存数量", "缺货率", "滞销情况",
+        "销量汇总", "FBA 库龄", "FBA 库存数量", "库存天数",
+      ];
+      for (const title of chartTitles) {
+        const section = document.createElement("section");
+        section.className = "chart-card";
+        const heading = document.createElement("h3");
+        heading.textContent = title;
+        section.append(heading);
+        if (title === "销量汇总") {
+          section.append(createSalesChart(selected));
+        } else {
+          const placeholder = document.createElement("p");
+          placeholder.className = "chart-placeholder";
+          placeholder.textContent = "待接入对应数据";
+          section.append(placeholder);
+        }
+        bars.append(section);
       }
     }
 
@@ -161,6 +247,3 @@ async function initialize() {
 
 if (typeof document !== "undefined") initialize();
 if (typeof module !== "undefined") module.exports = { summarize, filterRows, groupByWeek, ratio };
-
-
-

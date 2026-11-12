@@ -25,3 +25,30 @@ button { cursor: pointer; }
 .amount { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 580px) { main { padding: 16px 12px; } header, .card, .panel { padding: 15px; } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+
+nav { display:flex; flex-wrap:wrap; gap:6px; margin:16px 0; border-bottom:1px solid #c9d7e3; }
+nav a { color:#234157; padding:12px 16px; text-decoration:none; border-bottom:3px solid transparent; }
+nav a[aria-current="page"] { border-color:#087e78; color:#075c58; font-weight:700; }
+nav a:hover { background:#e0ecef; }
+.filter { background:#fff; padding:16px; border:1px solid #d9e3ec; border-radius:12px; }
+.filter label { min-width:0; }
+.filter select { max-width:190px; }
+#updated { margin:0 0 9px; font-size:13px; color:#40586b; }
+.card:first-child { border-top:3px solid #087e78; }
+.table-scroll { overflow:auto; }
+table { border-collapse:collapse; width:100%; white-space:nowrap; font-size:14px; }
+th,td { padding:12px 14px; border-bottom:1px solid #e1e9ef; text-align:right; font-variant-numeric:tabular-nums; }
+thead th { background:#eaf2f6; color:#234157; }
+th:first-child { position:sticky; left:0; background:#f3f7fa; text-align:left; }
+td:last-child { background:#edf8f6; font-weight:700; }
+.chart-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
+.chart-list span { padding:12px; background:#edf2f7; border-radius:8px; }
+@media(max-width:580px){nav a{padding:9px 8px;font-size:13px}.filter label{flex:1 1 42%}.filter input,.filter select{width:100%;max-width:none}}
+
+.chart-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.chart-card { border: 1px solid #d9e3ec; border-radius: 12px; padding: 14px; }
+.chart-card h3 { font-size: 15px; margin: 0 0 12px; }
+.chart-card .bar-row { grid-template-columns: 68px minmax(0, 1fr) max-content; margin-block: 7px; }
+.chart-card .negative { background: #b34a2d; }
+.chart-card canvas { display:block; width:100%; height:auto; }
+.chart-placeholder { display:grid; place-items:center; min-height:145px; margin:0; color:#40586b; background:#f3f7fa; border-radius:8px; }
