@@ -95,3 +95,6 @@ button:hover { background: #e9f5fc; }
 .dimension { margin: 0; padding: 4px 6px; min-width: 94px; border: 1px solid #b9cede; border-radius: 8px; }
 .dimension legend { padding: 0 4px; font-size: 14px; }
 .product-options label { white-space: nowrap; }
+
+#summary { margin: 0 0 18px; }
+#summary[hidden] { display: none; }

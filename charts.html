@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公司总数据看板</title><link rel="stylesheet" href="./chart-history/style.css?v=history-v1"><script defer src="./chart-history/basis.js?v=history-v1"></script><script defer src="./date-range.js?v=recent-3m-v1"></script><script defer src="./chart-history/pilot.js?v=recent-3m-v1"></script><link rel="stylesheet" href="./dashboard-header.css?v=1"></head>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公司总数据看板</title><link rel="stylesheet" href="./chart-history/style.css?v=summary-v1"><script defer src="./chart-history/basis.js?v=summary-v1"></script><script defer src="./date-range.js?v=recent-3m-v1"></script><script defer src="./chart-history/pilot.js?v=summary-v1"></script><link rel="stylesheet" href="./dashboard-header.css?v=1"></head>
 <body><main>
 <header class="dashboard-header"><h1>公司总数据看板</h1></header>
 <nav aria-label="看板导航"><a href="./charts.html?v=dashboard-header-v1" aria-current="page">公司总数据看板</a><a href="./monthly.html?v=dashboard-header-v1">月数据看板</a><a href="./index.html?v=dashboard-header-v1">周数据看板</a></nav>
@@ -12,5 +12,6 @@
 <div class="asin-picker"><label>搜索 ASIN<input id="asin-search" type="search" placeholder="输入 ASIN"></label><div id="asin-options" class="product-options"></div><p id="asin-count"></p></div><div class="asin-picker"><label>搜索父单<input id="parent-search" type="search" placeholder="输入父单"></label><div id="parent-options" class="product-options"></div><p id="parent-count"></p></div><button id="apply" type="button">应用筛选</button><button id="reset" type="button">重置筛选</button>
 </section>
 <p id="status" role="status">正在加载…</p>
+<section id="summary" class="metrics" aria-label="所选范围指标总计" hidden></section>
 <div class="bars chart-grid" id="charts"></div>
 </main></body></html>

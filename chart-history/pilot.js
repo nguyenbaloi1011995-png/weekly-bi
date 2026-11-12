@@ -181,6 +181,7 @@ const grain = document.querySelector("#grain");
 const from = document.querySelector("#from");
 const to = document.querySelector("#to");
 const status = document.querySelector("#status");
+const summary = document.querySelector("#summary");
 const grid = document.querySelector("#charts");
 const dimensions = [...document.querySelectorAll(".dimension")];
 const selectedAsins = new Set();
@@ -189,6 +190,7 @@ const selectedParents = new Set();
 const cache = new Map();
 let generation = 0;
 let basis;
+let salesIndex;
 let displayed = new Map();
 
 function drill(label) {
@@ -200,6 +202,61 @@ function drill(label) {
   render();
 }
 
+const salesCache = new Map();
+const summaryInteger = new Intl.NumberFormat("zh-CN", {maximumFractionDigits: 0});
+const summaryMoney = new Intl.NumberFormat("zh-CN", {style: "currency", currency: "CNY", maximumFractionDigits: 0});
+const summaryPercent = new Intl.NumberFormat("zh-CN", {style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2});
+const salesKey = (date, group, region, asin) => JSON.stringify([date, group, region, asin === "-" ? "" : asin]);
+
+async function summarizeSales(start, end, filters, matchingKeys, request) {
+  const totals = {};
+  const [groups, regions, , , asins] = filters.map(values => new Set(values));
+  for (const month of salesIndex.months) {
+    if ((start && month.last < start) || (end && month.first > end)) continue;
+    if (!salesCache.has(month.file)) {
+      if (salesCache.size >= 4) salesCache.delete(salesCache.keys().next().value);
+      salesCache.set(month.file, fetch("./data/" + month.file).then(response => {
+        if (!response.ok) throw new Error("Sales data unavailable");
+        return response.json();
+      }).catch(error => { salesCache.delete(month.file); throw error; }));
+    }
+    const rows = await salesCache.get(month.file);
+    if (request !== generation) return totals;
+    for (const row of rows) {
+      if ((start && row.date < start) || (end && row.date > end)) continue;
+      if (groups.size && !groups.has(row.group) || regions.size && !regions.has(row.region) ||
+          asins.size && !asins.has(row.product)) continue;
+      if (matchingKeys && !matchingKeys.has(salesKey(row.date, row.group, row.region, row.product))) continue;
+      for (const name of ["sales", "units", "grossProfit", "adSpend"]) {
+        if (Number.isFinite(row[name])) totals[name] = (totals[name] ?? 0) + row[name];
+      }
+    }
+  }
+  return totals;
+}
+
+function showSummary(sales, stock) {
+  const ratio = value => value == null || !sales.sales ? null : value / sales.sales;
+  const cards = [
+    ["累计销售额", sales.sales, summaryMoney],
+    ["累计销量", sales.units, summaryInteger],
+    ["累计毛利率", ratio(sales.grossProfit), summaryPercent],
+    ["累计广告花费占比", ratio(sales.adSpend), summaryPercent],
+    ...["平均FBA+在途库存天数", "平均FBA库存天数", "SAB级缺货率", "新品缺货率", "滞销率"].map(name =>
+      [name, stock?.values[basis.fields.indexOf(name)], name.endsWith("天数") ? summaryInteger : summaryPercent]),
+  ];
+  summary.replaceChildren(...cards.map(([name, value, format]) => {
+    const card = document.createElement("article");
+    card.className = "card";
+    const label = document.createElement("h2");
+    label.textContent = name;
+    const amount = document.createElement("p");
+    amount.textContent = Number.isFinite(value) ? format.format(value) : "—";
+    card.append(label, amount);
+    return card;
+  }));
+  summary.hidden = false;
+}
 async function render() {
 
   const type = grain.value;
@@ -207,11 +264,16 @@ async function render() {
   const selections = dimensions.map(field => [...field.querySelectorAll("input:checked")].map(box => box.value));
   const filters = [...selections, [...selectedAsins], [...selectedParents]];
   const request = ++generation;
+  summary.hidden = true;
   status.textContent = "正在读取所选日期的数据…";
   try {
     const files = basis.files.filter(file =>
       (!start || file.last >= start) && (!end || file.first <= end));
     const rollup = createBasisRollup(basis.fields, type, start, end, filters);
+    const total = createBasisRollup(basis.fields, "total", start, end, filters);
+    const matchingKeys = filters[2].length || filters[3].length || filters[5].length ? new Set() : null;
+    const captureKey = matchingKeys ? ([date, group, region, , , asin]) =>
+      matchingKeys.add(salesKey(date, group, region, asin)) : undefined;
     for (const [i, file] of files.entries()) {
       status.textContent = `正在读取数据 ${i + 1} / ${files.length}…`;
       if (!cache.has(file.file)) {
@@ -230,13 +292,17 @@ async function render() {
       const block = await cache.get(file.file);
       if (request !== generation) return;
       rollup.add(block);
+      total.add(block, captureKey);
     }
+    const sales = await summarizeSales(start, end, filters, matchingKeys, request);
+    if (request !== generation) return;
+    showSummary(sales, total.finish()[0]);
     const data = basis;
     const rows = rollup.finish();
     grid.replaceChildren();
     displayed = new Map(rows.map(row => [row.label, row]));
     status.textContent = rows.length ?
-      `共 ${rows.length} 个周期。周日到周六为一周，点图内数据区域可下钻。` : "当前筛选条件无数据。";
+      `共 ${rows.length} 个周期。周日到周六为一周，点图内数据区域可下钻。` : Object.keys(sales).length ? "当前筛选条件无图表数据。" : "当前筛选条件无数据。";
     if (!rows.length) return;
     const order = ["FBA 库存数量", "国内库存数量", "FBA 库龄", "国内库龄",
       "库存天数", "销量汇总", "缺货率", "滞销情况"];
@@ -250,7 +316,7 @@ async function render() {
       grid.append(drawChart({ title: chart.title, series }));
     }
   } catch (error) {
-    if (request === generation) status.textContent = "试点数据计算失败，请重新应用筛选。";
+    if (request === generation) status.textContent = "数据计算失败，请重新应用筛选。";
     console.error(error);
   }
 }
@@ -259,6 +325,9 @@ async function initialize() {
   const response = await fetch("./chart-history/data/index.json", { cache: "no-cache" });
   if (!response.ok) throw new Error("Basis unavailable");
   basis = await response.json();
+  const salesResponse = await fetch("./data/index.json", {cache: "no-cache"});
+  if (!salesResponse.ok) throw new Error("Sales index unavailable");
+  salesIndex = await salesResponse.json();
   for (const input of [from, to]) { input.min = basis.first; input.max = basis.last; }
   const optionsFor = i => basis.options[i - 1];
   dimensions.forEach((field, i) => {
@@ -323,4 +392,4 @@ async function initialize() {
   document.querySelector("#reset").addEventListener("click", reset);
   reset();
 }
-initialize().catch(error => { status.textContent = "试点数据加载失败。"; console.error(error); });
+initialize().catch(error => { status.textContent = "数据加载失败。"; console.error(error); });

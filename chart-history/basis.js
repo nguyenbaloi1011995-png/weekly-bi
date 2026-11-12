@@ -13,11 +13,12 @@ function createBasisRollup(fields, grain, start, end, filters) {
   };
   const ratio = (a, b) => a == null || !b ? null : a / b;
 
-  function add(rows) {
+  function add(rows, onMatch) {
     for (const row of rows) {
       const day = row[0];
       if ((start && day < start) || (end && day > end)) continue;
       if (allowed.some((selection, i) => selection.size && !selection.has(row[i + 1]))) continue;
+      onMatch?.(row);
       let label = grain === "total" ? "total" : grain === "month" ? day.slice(0, 7) : day;
       if (grain === "week") {
         if (!weeks.has(day)) {
