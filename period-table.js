@@ -207,7 +207,7 @@ async function initialize() {
   }
 
   function reset() {
-    start.value = recentThreeMonths(first, last);
+    start.value = monthly ? first : recentThreeMonths(first, last);
     end.value = last;
     selects.forEach(select => { select.value = ""; });
     render();
