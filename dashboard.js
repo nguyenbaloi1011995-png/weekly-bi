@@ -37,41 +37,67 @@ async function initialize() {
   const bars = document.querySelector("#bars");
 
   try {
-    const response = await fetch("./weekly.json?v=filters-v2", { cache: "no-cache" });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    const data = await response.json();
-    if (data.simulated !== true || !Array.isArray(data.rows)) throw new Error("Invalid demo data");
-    const rows = data.rows;
-    const dimensions = ["group", "region", "product"];
-    const keys = Object.keys(summarize([]));
-    if (rows.some(row => !row || !/^\d{4}-\d{2}-\d{2}$/.test(row.date) ||
-      !/^\d{4}-W\d{2}$/.test(row.week) ||
-      dimensions.some(key => typeof row[key] !== "string" || !row[key]) ||
-      keys.some(key => !Number.isFinite(row[key])) || row.sales < 0)) {
-      throw new Error("Invalid demo rows");
+    async function readJson(path) {
+      const response = await fetch(path, { cache: "no-cache" });
+      if (!response.ok) throw new Error(path + ": HTTP " + response.status);
+      return response.json();
     }
 
-    const selects = dimensions.map(key => [key, document.getElementById(key)]);
-    const dates = rows.map(row => row.date).sort();
+    const index = await readJson("./data/index.json");
+    const months = index.months;
+    const latest = months.at(-1);
+    document.querySelector("#dataset").textContent = index.simulated ? "模拟数据" : "汇总数据";
+    document.querySelector("#updated").textContent = "数据更新 " +
+      new Date(index.updatedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+    const selects = ["group", "region", "product"].map(key => [key, document.getElementById(key)]);
     for (const input of [start, end]) {
-      input.min = dates[0] ?? "";
-      input.max = dates.at(-1) ?? "";
-      input.disabled = !rows.length;
+      input.min = months[0]?.first ?? "";
+      input.max = latest?.last ?? "";
     }
     for (const [key, select] of selects) {
-      const values = [...new Set(rows.map(row => row[key]))].sort();
-      select.replaceChildren(new Option("全部", ""), ...values.map(value => new Option(value, value)));
-      select.disabled = !rows.length;
+      select.replaceChildren(new Option("全部", ""), ...index.dimensions[key].map(value => new Option(value, value)));
+    }
+    const cache = new Map();
+    let request = 0;
+
+    function loadMonth(month) {
+      if (!cache.has(month.file)) {
+        cache.set(month.file, readJson("./data/" + month.file).catch(error => {
+          cache.delete(month.file);
+          throw error;
+        }));
+      }
+      return cache.get(month.file);
     }
 
-    function render() {
+    async function render() {
+      const current = ++request;
+      const from = start.value;
+      const to = end.value;
       const filters = Object.fromEntries(selects.map(([key, select]) => [key, select.value]));
-      const selected = groupByWeek(filterRows(rows, start.value, end.value, filters));
+      const wanted = from && to && from > to ? [] :
+        months.filter(month => (!from || month.last >= from) && (!to || month.first <= to));
+      metrics.replaceChildren();
+      bars.replaceChildren();
+      trend.hidden = true;
+      status.textContent = "正在加载…";
+      try {
+        const rows = (await Promise.all(wanted.map(loadMonth))).flat();
+        if (current !== request) return;
+        showRows(rows, from, to, filters);
+      } catch (error) {
+        if (current === request) status.textContent = "数据加载失败，请重试。";
+        console.error(error);
+      }
+    }
+
+    function showRows(rows, from, to, filters) {
+      const selected = groupByWeek(filterRows(rows, from, to, filters));
       metrics.replaceChildren();
       bars.replaceChildren();
       trend.hidden = !selected.length;
       status.textContent = selected.length ? `共 ${selected.length} 周` :
-        rows.length ? "当前条件下没有数据，请调整日期或筛选项。" : "暂无数据。";
+        "当前条件下没有数据，请调整日期或筛选项。";
       if (!selected.length) return;
 
       const { sales, units, orders, grossProfit, adSpend } = summarize(selected);
@@ -94,7 +120,7 @@ async function initialize() {
         metrics.append(card);
       }
 
-      const maximum = Math.max(1, ...selected.map(row => row.sales));
+      const maximum = selected.reduce((max, row) => Math.max(max, Math.abs(row.sales)), 1);
       for (const row of selected) {
         const bar = document.createElement("div");
         bar.className = "bar-row";
@@ -105,7 +131,7 @@ async function initialize() {
         track.setAttribute("aria-hidden", "true");
         const fill = document.createElement("div");
         fill.className = "fill";
-        fill.style.width = `${row.sales / maximum * 100}%`;
+        fill.style.width = `${Math.abs(row.sales) / maximum * 100}%`;
         track.append(fill);
         const amount = document.createElement("span");
         amount.className = "amount";
@@ -116,8 +142,8 @@ async function initialize() {
     }
 
     function reset() {
-      start.value = dates[0] ?? "";
-      end.value = dates.at(-1) ?? "";
+      start.value = latest?.first ?? "";
+      end.value = latest?.last ?? "";
       for (const [, select] of selects) select.value = "";
       render();
     }
@@ -128,12 +154,13 @@ async function initialize() {
     document.querySelector("#reset").addEventListener("click", reset);
     reset();
   } catch (error) {
-    status.textContent = "加载失败，请确认 weekly.json 可访问且格式正确。";
+    status.textContent = "加载失败，请检查数据索引。";
     console.error(error);
   }
 }
 
 if (typeof document !== "undefined") initialize();
 if (typeof module !== "undefined") module.exports = { summarize, filterRows, groupByWeek, ratio };
+
 
 

@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>周数据总看板</title>
 <link rel="stylesheet" href="./style.css?v=filters-v2">
-<script defer src="./dashboard.js?v=filters-v2"></script>
+<script defer src="./dashboard.js?v=monthly-v1"></script>
 </head>
 <body>
 <main>
-<header><div><p class="eyebrow">经营分析 / 周报</p><h1>周数据总看板</h1></div><span class="badge">模拟数据</span></header>
+<header><div><p class="eyebrow">经营分析 / 周报</p><h1>周数据总看板</h1></div><span class="badge" id="dataset"></span></header>
 <section class="filter" aria-label="组合筛选">
 <label>开始日期<input type="date" id="start"></label>
 <label>结束日期<input type="date" id="end"></label>
@@ -17,6 +17,7 @@
 <label>地区<select id="region"></select></label>
 <label>产品<select id="product"></select></label>
 <button id="reset" type="button">重置筛选</button>
+<p id="updated"></p>
 <p id="status" role="status">正在加载…</p>
 </section>
 <section id="metrics" class="metrics" aria-label="核心指标"></section>
@@ -27,4 +28,5 @@
 </main>
 </body>
 </html>
+
 
