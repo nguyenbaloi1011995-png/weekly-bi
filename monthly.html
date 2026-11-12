@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>月数据看板</title>
-<link rel="stylesheet" href="./style.css?v=product-filters-v1">
-<script defer src="./product-picker.js?v=1"></script><script defer src="./date-range.js?v=recent-3m-v1"></script><script defer src="./chart-history/basis.js?v=summary-v1"></script><script defer src="./period-table.js?v=product-filters-v1"></script>
+<link rel="stylesheet" href="./style.css?v=multi-dimensions-v1">
+<script defer src="./product-picker.js?v=1"></script><script defer src="./date-range.js?v=recent-3m-v1"></script><script defer src="./chart-history/basis.js?v=summary-v1"></script><script defer src="./period-table.js?v=multi-dimensions-v1"></script>
 <link rel="stylesheet" href="./dashboard-header.css?v=1"></head>
 <body data-page="monthly.html">
 <main>
 <header class="dashboard-header"><h1>月数据看板</h1></header>
-<nav aria-label="看板导航"><a href="./charts.html?v=product-filters-v1">公司总数据看板</a><a href="./monthly.html?v=product-filters-v1" aria-current="page">月数据看板</a><a href="./index.html?v=product-filters-v1">周数据看板</a></nav>
+<nav aria-label="看板导航"><a href="./charts.html?v=multi-dimensions-v1">公司总数据看板</a><a href="./monthly.html?v=multi-dimensions-v1" aria-current="page">月数据看板</a><a href="./index.html?v=multi-dimensions-v1">周数据看板</a></nav>
 <section class="filter" aria-label="组合筛选">
 <label>开始日期<input type="date" id="start"></label>
 <label>结束日期<input type="date" id="end"></label>
-<label>小组<select id="group"></select></label>
-<label>地区<select id="region"></select></label>
+<fieldset class="dimension"><legend>小组</legend><div id="group" class="product-options"></div></fieldset>
+<fieldset class="dimension"><legend>地区</legend><div id="region" class="product-options"></div></fieldset>
 <div class="asin-picker"><label>搜索 ASIN<input id="asin-search" type="search" placeholder="输入 ASIN"></label><div id="asin-options" class="product-options"></div><p id="asin-count"></p></div>
 <div class="asin-picker"><label>搜索父单<input id="parent-search" type="search" placeholder="输入父单"></label><div id="parent-options" class="product-options"></div><p id="parent-count"></p></div>
 <button id="apply" type="button">应用筛选</button>

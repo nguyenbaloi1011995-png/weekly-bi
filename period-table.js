@@ -70,7 +70,7 @@ async function initialize() {
   const status = document.querySelector("#status");
   const panel = document.querySelector("#trend");
   const output = document.querySelector("#bars");
-  const selects = ["group", "region"].map(id => document.getElementById(id));
+  const dimensions = ["group", "region"].map(id => document.getElementById(id));
   const [sales, stock, extra] = await Promise.all([
     read("./data/index.json"),
     read("./chart-history/data/index.json"),
@@ -81,10 +81,18 @@ async function initialize() {
   document.querySelector("#updated").textContent = "数据更新 " +
     new Date(sales.updatedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
   for (const input of [start, end]) { input.min = first; input.max = last; }
-  selects.forEach((select, i) => {
+  const choices = dimensions.map((list, i) => {
     const key = ["group", "region"][i];
     const values = [...new Set([...sales.dimensions[key], ...stock.options[i]])].sort();
-    select.replaceChildren(new Option("全部", ""), ...values.map(value => new Option(value, value)));
+    return values.map(value => {
+      const label = document.createElement("label");
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.value = value;
+      label.append(box, value);
+      list.append(label);
+      return box;
+    });
   });
 
   const selectedAsins = new Set();
@@ -110,15 +118,15 @@ async function initialize() {
     const current = ++generation;
     const from = start.value || first;
     const to = end.value || last;
-    const [group, region] = selects.map(select => select.value);
+    const [groups, regions] = choices.map(boxes => new Set(boxes.filter(box => box.checked).map(box => box.value)));
     const asins = new Set(selectedAsins);
     const parents = [...selectedParents];
     const parentKeys = parents.length ? new Set() : null;
-    const restrictedExtra = region || asins.size || parents.length;
+    const restrictedExtra = regions.size || asins.size || parents.length;
     const inRange = day => day >= from && day <= to;
     const overlaps = file => from <= to && file.last >= from && file.first <= to;
-    const matches = (g, r, a) => (!group || group === g) && (!region || region === r) && (!asins.size || asins.has(a));
-    const selectors = [group ? [group] : [], region ? [region] : [], [], [], [...asins], parents];
+    const matches = (g, r, a) => (!groups.size || groups.has(g)) && (!regions.size || regions.has(r)) && (!asins.size || asins.has(a));
+    const selectors = [[...groups], [...regions], [], [], [...asins], parents];
     const salesRoll = aggregateRows();
     const extraRoll = aggregateRows();
     const stockRoll = createBasisRollup(stock.fields, grain, from, to, selectors);
@@ -163,7 +171,7 @@ async function initialize() {
         salesRead(),
         loadFiles(extraFiles, "./monthly-metrics/", true, rows => {
           for (const [date, g, ...values] of rows) {
-            if (inRange(date) && group === g) extraRoll.add(date, values);
+            if (inRange(date) && (groups.size ? groups.has(g) : g === "")) extraRoll.add(date, values);
           }
         }),
       ]);
@@ -235,12 +243,12 @@ async function initialize() {
   function reset() {
     start.value = monthly ? first : recentThreeMonths(first, last);
     end.value = last;
-    selects.forEach(select => { select.value = ""; });
+    choices.flat().forEach(box => { box.checked = false; });
     resetAsins();
     resetParents();
     return render();
   }
-  [start, end, ...selects].forEach(control => control.addEventListener("change", render));
+  [start, end].forEach(control => control.addEventListener("change", render));
   document.querySelector("#apply").addEventListener("click", render);
   document.querySelector("#reset").addEventListener("click", reset);
   reset();
