@@ -78,7 +78,6 @@ async function initialize() {
   ]);
   const first = sales.months[0].first;
   const last = sales.months.at(-1).last;
-  document.querySelector("#dataset").textContent = "汇总数据";
   document.querySelector("#updated").textContent = "数据更新 " +
     new Date(sales.updatedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
   for (const input of [start, end]) { input.min = first; input.max = last; }

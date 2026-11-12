@@ -1,0 +1,19 @@
+header.dashboard-header {
+  display: block;
+  padding: 34px 20px;
+  border: 0;
+  border-radius: 22px;
+  background: #10283e;
+  color: white;
+  text-align: center;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: clamp(24px, 5vw, 40px);
+  line-height: 1.25;
+}
+
+@media (max-width: 580px) {
+  header.dashboard-header { padding: 24px 12px; }
+}
