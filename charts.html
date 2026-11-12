@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>图像看板</title>
-<link rel="stylesheet" href="./style.css?v=excel-charts-v2">
-<script defer src="./snapshot.js?v=1"></script>
-</head>
-<body data-page="charts.html">
-<main>
-<header><div><p class="eyebrow">经营分析 / 周报</p><h1>图像看板</h1></div><span class="badge" id="dataset"></span></header>
-<nav aria-label="看板导航"><a href="./index.html?v=stock-filters-v1">周数据看板</a><a href="./monthly.html?v=stock-filters-v1">月数据看板</a><a href="./charts.html?v=stock-filters-v1" aria-current="page">图像看板</a><a href="./stockout.html?v=stock-filters-v1">缺货看板</a></nav>
-<section class="panel"><p id="snapshot-status" role="status">正在读取 Excel 图表快照…</p><div id="snapshot-charts" class="bars chart-grid"></div></section></main>
-</body>
-</html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>图像看板</title><link rel="stylesheet" href="./chart-history/style.css?v=history-v1"><script defer src="./chart-history/basis.js?v=history-v1"></script><script defer src="./chart-history/pilot.js?v=history-v1"></script></head>
+<body><main>
+<header><h1>图像看板</h1></header>
+<nav aria-label="看板导航"><a href="./index.html?v=history-v1">周数据看板</a><a href="./monthly.html?v=history-v1">月数据看板</a><a href="./charts.html?v=history-v1" aria-current="page">图像看板</a><a href="./stockout.html?v=history-v1">缺货看板</a></nav>
+<section class="filter" aria-label="图表筛选">
+<label>时间粒度<select id="grain"><option value="day">天</option><option value="week" selected>周</option><option value="month">月</option></select></label>
+<label>开始日期<input id="from" type="date"></label>
+<label>结束日期<input id="to" type="date"></label>
+<fieldset class="dimension"><legend>小组</legend><div class="product-options"></div></fieldset><fieldset class="dimension"><legend>区域</legend><div class="product-options"></div></fieldset>
+<fieldset class="dimension"><legend>父单等级</legend><div class="product-options"></div></fieldset><fieldset class="dimension"><legend>子单等级</legend><div class="product-options"></div></fieldset>
+<div class="asin-picker"><label>搜索 ASIN<input id="asin-search" type="search" placeholder="输入 ASIN"></label><div id="asin-options" class="product-options"></div><p id="asin-count"></p></div><div class="asin-picker"><label>搜索父单<input id="parent-search" type="search" placeholder="输入父单"></label><div id="parent-options" class="product-options"></div><p id="parent-count"></p></div><button id="apply" type="button">应用筛选</button><button id="reset" type="button">重置筛选</button>
+</section>
+<p id="status" role="status">正在加载…</p>
+<div class="bars chart-grid" id="charts"></div>
+</main></body></html>
