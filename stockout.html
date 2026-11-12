@@ -10,7 +10,7 @@
 <body data-page="stockout.html">
 <main>
 <header><div><p class="eyebrow">经营分析 / 周报</p><h1>缺货看板</h1></div><span class="badge" id="dataset"></span></header>
-<nav aria-label="看板导航"><a href="./index.html?v=recent-3m-v1">周数据看板</a><a href="./monthly.html?v=recent-3m-v1">月数据看板</a><a href="./charts.html?v=recent-3m-v1">图像看板</a><a href="./stockout.html?v=recent-3m-v1" aria-current="page">缺货看板</a></nav>
+<nav aria-label="看板导航"><a href="./index.html?v=full-table-v1">周数据看板</a><a href="./monthly.html?v=full-table-v1">月数据看板</a><a href="./charts.html?v=full-table-v1">图像看板</a><a href="./stockout.html?v=full-table-v1" aria-current="page">缺货看板</a></nav>
 <section class="panel"><h2>缺货明细</h2><div class="filter" aria-label="缺货筛选"><label>开始日期<input id="stock-from" type="date"></label><label>结束日期<input id="stock-to" type="date"></label><label>小组<select id="stock-group"></select></label><label>区域<select id="stock-region"></select></label><label>父单等级<select id="stock-parentTier"></select></label><label>子单等级<select id="stock-childTier"></select></label><label>搜索缺货明细<input id="stock-search" type="search" placeholder="日期、小组、区域、ASIN 或品名"></label><button id="stock-reset" type="button">重置筛选</button></div><p id="snapshot-status" role="status">正在加载…</p>
 <div class="table-scroll"><table><thead><tr><th>日期</th><th>小组</th><th>区域</th><th>ASIN</th><th>品名</th><th>父单等级</th><th>子单等级</th><th>缺货数量（估计）</th></tr></thead><tbody id="stock-rows"></tbody></table></div>
 </section></main>
