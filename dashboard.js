@@ -228,7 +228,7 @@ async function initialize() {
     }
 
     function reset() {
-      start.value = latest?.first ?? "";
+      start.value = recentThreeMonths(months[0]?.first, latest?.last);
       end.value = latest?.last ?? "";
       for (const [, select] of selects) select.value = "";
       render();

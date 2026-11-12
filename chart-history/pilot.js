@@ -313,9 +313,7 @@ async function initialize() {
   grain.addEventListener("change", render);
   function reset() {
     to.value = basis.last;
-    const latest = new Date(basis.last + "T00:00:00Z");
-    latest.setUTCDate(latest.getUTCDate() - latest.getUTCDay());
-    from.value = latest.toISOString().slice(0, 10);
+    from.value = recentThreeMonths(basis.first, basis.last);
     grain.value = "week";
     dimensions.forEach(field => field.querySelectorAll("input").forEach(box => { box.checked = false; }));
     resetAsins();
